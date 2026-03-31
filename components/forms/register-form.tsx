@@ -1,6 +1,8 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
+import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { registerUser } from "@/app/actions/auth-actions";
@@ -9,10 +11,13 @@ import { FormMessage } from "@/components/ui/form-message";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-const initialState = { error: "" };
+const initialState = { error: "", success: false };
 
 export function RegisterForm() {
+  const router = useRouter();
   const [state, action] = useActionState(registerUser, initialState);
+  const [submittedCredentials, setSubmittedCredentials] = useState<{ email: string; password: string } | null>(null);
+  const hasAutoSignedIn = useRef(false);
 
   useEffect(() => {
     if (state.error) {
@@ -20,8 +25,45 @@ export function RegisterForm() {
     }
   }, [state.error]);
 
+  useEffect(() => {
+    if (!state.success || !submittedCredentials || hasAutoSignedIn.current) {
+      return;
+    }
+
+    hasAutoSignedIn.current = true;
+
+    void (async () => {
+      const result = await signIn("credentials", {
+        email: submittedCredentials.email,
+        password: submittedCredentials.password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        toast.error("La cuenta se creó, pero no se pudo iniciar sesión automáticamente.");
+        router.push("/login");
+        return;
+      }
+
+      toast.success("Cuenta creada. ¡Bienvenido!");
+      router.push("/dashboard");
+      router.refresh();
+    })();
+  }, [router, state.success, submittedCredentials]);
+
   return (
-    <form action={action} className="space-y-5">
+    <form
+      action={action}
+      className="space-y-5"
+      onSubmit={(event) => {
+        const formData = new FormData(event.currentTarget);
+        setSubmittedCredentials({
+          email: String(formData.get("email") ?? "").toLowerCase(),
+          password: String(formData.get("password") ?? ""),
+        });
+        hasAutoSignedIn.current = false;
+      }}
+    >
       <div className="space-y-2">
         <Label htmlFor="name">Nombre</Label>
         <Input id="name" name="name" placeholder="Jose Ascanio" required />

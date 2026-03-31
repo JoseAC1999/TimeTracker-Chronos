@@ -2,7 +2,6 @@
 
 import bcrypt from "bcryptjs";
 import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/db/prisma";
 import { captureError } from "@/lib/observability/capture";
@@ -88,6 +87,7 @@ export async function registerUser(_: { error?: string } | undefined, formData: 
       message: "User registered successfully",
       context: { userId: user.id, email: data.email, workspaceId: workspace.id, ip },
     });
+    return { success: true };
   } catch (error) {
     captureError(error, "auth.register.failure");
     if (error instanceof Error && error.message.includes("[")) {
@@ -96,6 +96,4 @@ export async function registerUser(_: { error?: string } | undefined, formData: 
 
     return { error: error instanceof Error ? error.message : "No se pudo crear la cuenta." };
   }
-
-  redirect("/login?registered=1");
 }
