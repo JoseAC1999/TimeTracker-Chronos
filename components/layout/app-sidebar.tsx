@@ -33,6 +33,7 @@ export function AppSidebar({ pathname }: { pathname: string }) {
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={false}
                 className={cn(
                   "flex items-center gap-3 rounded-2xl px-4 py-3 text-sm transition",
                   active ? "bg-white text-slate-950" : "text-slate-300 hover:bg-white/10 hover:text-white",
