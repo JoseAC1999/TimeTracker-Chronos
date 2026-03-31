@@ -36,6 +36,7 @@ export function RegisterForm() {
       const result = await signIn("credentials", {
         email: submittedCredentials.email,
         password: submittedCredentials.password,
+        callbackUrl: "/dashboard",
         redirect: false,
       });
 
@@ -46,8 +47,12 @@ export function RegisterForm() {
       }
 
       toast.success("Cuenta creada. ¡Bienvenido!");
-      router.push("/dashboard");
-      router.refresh();
+      if (result?.url) {
+        window.location.assign(result.url);
+        return;
+      }
+
+      window.location.assign("/dashboard");
     })();
   }, [router, state.success, submittedCredentials]);
 
