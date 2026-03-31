@@ -14,7 +14,12 @@ function slugifyWorkspace(name: string) {
   return `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export async function registerUser(_: { error?: string } | undefined, formData: FormData) {
+type RegisterActionState = {
+  error: string;
+  success: boolean;
+};
+
+export async function registerUser(_: RegisterActionState, formData: FormData): Promise<RegisterActionState> {
   try {
     const requestHeaders = await headers();
     const ip = getClientIp(requestHeaders);
@@ -31,7 +36,7 @@ export async function registerUser(_: { error?: string } | undefined, formData: 
         message: "Register blocked by rate limiter",
         context: { ip, retryAfterSec: rate.retryAfterSec },
       });
-      return { error: `Demasiados intentos de registro. Inténtalo de nuevo en ${rate.retryAfterSec} segundos.` };
+      return { error: `Demasiados intentos de registro. Inténtalo de nuevo en ${rate.retryAfterSec} segundos.`, success: false };
     }
 
     const raw = {
@@ -46,7 +51,7 @@ export async function registerUser(_: { error?: string } | undefined, formData: 
     });
 
     if (existingUser) {
-      return { error: "Ya existe una cuenta con ese correo." };
+      return { error: "Ya existe una cuenta con ese correo.", success: false };
     }
 
     const passwordHash = await bcrypt.hash(data.password, 12);
@@ -87,13 +92,13 @@ export async function registerUser(_: { error?: string } | undefined, formData: 
       message: "User registered successfully",
       context: { userId: user.id, email: data.email, workspaceId: workspace.id, ip },
     });
-    return { success: true };
+    return { error: "", success: true };
   } catch (error) {
     captureError(error, "auth.register.failure");
     if (error instanceof Error && error.message.includes("[")) {
-      return { error: "Revisa los campos del formulario." };
+      return { error: "Revisa los campos del formulario.", success: false };
     }
 
-    return { error: error instanceof Error ? error.message : "No se pudo crear la cuenta." };
+    return { error: error instanceof Error ? error.message : "No se pudo crear la cuenta.", success: false };
   }
 }
