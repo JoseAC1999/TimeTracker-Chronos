@@ -6,6 +6,7 @@ import { RotateCcw } from "lucide-react";
 import { deleteTimeEntryAction, restoreTimeEntryAction } from "@/app/actions/time-entry-actions";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { ManualEntryForm } from "@/components/timer/manual-entry-form";
+import { SessionEditDialog } from "@/components/timer/session-edit-dialog";
 import { EmptyState } from "@/components/states/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,18 +20,28 @@ import { getSessions } from "@/services/time-entries/time-entry-service";
 export default async function SessionsPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ range?: "day" | "week" | "month"; deleted?: string }>;
+  searchParams?: Promise<{ range?: "day" | "week" | "month"; deleted?: string; edit?: string }>;
 }) {
   const user = await requireUser();
   const params = (await searchParams) ?? {};
   const range = params.range ?? "week";
   const showDeleted = params.deleted === "1";
+  const baseQuery = new URLSearchParams();
+  baseQuery.set("range", range);
+  if (showDeleted) {
+    baseQuery.set("deleted", "1");
+  }
+  const baseHref = `/sessions?${baseQuery.toString()}`;
   const [entries, projects, tasks, tags] = await Promise.all([
     getSessions(user.workspaceId!, user.id, { range }, { includeDeleted: showDeleted }),
     prisma.project.findMany({ where: { workspaceId: user.workspaceId!, deletedAt: null }, orderBy: { name: "asc" } }),
     prisma.task.findMany({ where: { workspaceId: user.workspaceId!, deletedAt: null }, orderBy: { name: "asc" } }),
     prisma.tag.findMany({ where: { workspaceId: user.workspaceId! }, orderBy: { name: "asc" } }),
   ]);
+  const taskOptions = tasks.map((task) => ({ id: task.id, name: task.name, projectId: task.projectId }));
+  const editingEntry = params.edit
+    ? entries.find((entry) => entry.id === params.edit && !entry.deletedAt)
+    : undefined;
 
   const trackedSec = entries.reduce((sum, entry) => sum + entry.durationSec, 0);
   const runningCount = entries.filter((entry) => entry.isRunning).length;
@@ -72,9 +83,9 @@ export default async function SessionsPage({
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {[
-                { key: "day" as const, label: "Día", href: "/sessions?range=day" },
-                { key: "week" as const, label: "Semana", href: "/sessions?range=week" },
-                { key: "month" as const, label: "Mes", href: "/sessions?range=month" },
+                { key: "day" as const, label: "Día", href: `/sessions?range=day${showDeleted ? "&deleted=1" : ""}` },
+                { key: "week" as const, label: "Semana", href: `/sessions?range=week${showDeleted ? "&deleted=1" : ""}` },
+                { key: "month" as const, label: "Mes", href: `/sessions?range=month${showDeleted ? "&deleted=1" : ""}` },
               ].map((item) => (
                 <Link
                   key={item.key}
@@ -103,7 +114,7 @@ export default async function SessionsPage({
               </Link>
             </div>
           </div>
-          <ManualEntryForm projects={projects} tasks={tasks.map((task) => ({ id: task.id, name: task.name, projectId: task.projectId }))} tags={tags} />
+          <ManualEntryForm projects={projects} tasks={taskOptions} tags={tags} />
         </CardHeader>
         <CardContent className="space-y-4">
           {entries.length ? (
@@ -132,20 +143,9 @@ export default async function SessionsPage({
                   <div className="flex flex-wrap items-center gap-3">
                     <span className="rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">{formatDurationShort(entry.durationSec)}</span>
                     {!entry.deletedAt ? (
-                      <ManualEntryForm
-                        projects={projects}
-                        tasks={tasks.map((task) => ({ id: task.id, name: task.name, projectId: task.projectId }))}
-                        tags={tags}
-                        entry={{
-                          id: entry.id,
-                          projectId: entry.projectId,
-                          taskId: entry.taskId,
-                          startedAt: format(entry.startedAt, "yyyy-MM-dd'T'HH:mm"),
-                          endedAt: entry.endedAt ? format(entry.endedAt, "yyyy-MM-dd'T'HH:mm") : format(entry.startedAt, "yyyy-MM-dd'T'HH:mm"),
-                          note: entry.note,
-                          tagIds: entry.entryTags.map((item) => item.tag.id),
-                        }}
-                      />
+                      <Button asChild variant="secondary">
+                        <Link href={`${baseHref}&edit=${entry.id}`}>Editar sesión</Link>
+                      </Button>
                     ) : null}
                     {showDeleted && entry.deletedAt ? (
                       <form action={restoreTimeEntryAction}>
@@ -177,6 +177,23 @@ export default async function SessionsPage({
           )}
         </CardContent>
       </Card>
+      {editingEntry ? (
+        <SessionEditDialog
+          projects={projects}
+          tasks={taskOptions}
+          tags={tags}
+          returnHref={baseHref}
+          entry={{
+            id: editingEntry.id,
+            projectId: editingEntry.projectId,
+            taskId: editingEntry.taskId,
+            startedAt: format(editingEntry.startedAt, "yyyy-MM-dd'T'HH:mm"),
+            endedAt: editingEntry.endedAt ? format(editingEntry.endedAt, "yyyy-MM-dd'T'HH:mm") : format(editingEntry.startedAt, "yyyy-MM-dd'T'HH:mm"),
+            note: editingEntry.note,
+            tagIds: editingEntry.entryTags.map((item) => item.tag.id),
+          }}
+        />
+      ) : null}
     </div>
   );
 }

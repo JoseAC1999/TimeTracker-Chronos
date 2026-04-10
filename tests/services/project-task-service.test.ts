@@ -16,7 +16,7 @@ const originals = {
   taskUpdate: prisma.task.update,
   taskUpdateMany: prisma.task.updateMany,
 };
-const auditLogCreateNoop = (async () => ({ id: "audit-1" })) as typeof prisma.auditLog.create;
+const auditLogCreateNoop = (async () => ({ id: "audit-1" })) as unknown as typeof prisma.auditLog.create;
 
 function restorePrisma() {
   prisma.auditLog.create = auditLogCreateNoop;

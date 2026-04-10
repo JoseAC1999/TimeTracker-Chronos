@@ -46,6 +46,8 @@ export async function getReportData(workspaceId: string, userId: string, filters
           },
         },
       },
+      orderBy: { startedAt: "desc" },
+      take: 1000,
     }),
     prisma.tag.findMany({ where: { workspaceId }, orderBy: { name: "asc" } }),
     prisma.project.findMany({ where: { workspaceId, deletedAt: null }, orderBy: { name: "asc" } }),
@@ -85,11 +87,16 @@ export async function getReportData(workspaceId: string, userId: string, filters
     }, {}),
   );
 
+  const trendTotals = entries.reduce<Record<string, number>>((acc, entry) => {
+    const key = format(entry.startedAt, "yyyy-MM-dd");
+    acc[key] = (acc[key] ?? 0) + entry.durationSec;
+    return acc;
+  }, {});
+
   const trend = eachDayOfInterval({ start, end }).map((date) => {
+    const key = format(date, "yyyy-MM-dd");
     const label = format(date, "dd MMM", { locale: es });
-    const seconds = entries
-      .filter((entry) => format(entry.startedAt, "yyyy-MM-dd") === format(date, "yyyy-MM-dd"))
-      .reduce((sum, entry) => sum + entry.durationSec, 0);
+    const seconds = trendTotals[key] ?? 0;
 
     return { label, seconds };
   });

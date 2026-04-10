@@ -12,37 +12,53 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
-export function ManualEntryForm({
+type ManualEntryOption = { id: string; name: string };
+type ManualTaskOption = { id: string; name: string; projectId: string };
+type ManualEntryValue = {
+  id: string;
+  projectId: string;
+  taskId?: string | null;
+  startedAt: string;
+  endedAt: string;
+  note?: string | null;
+  tagIds: string[];
+};
+
+type ManualEntryDialogProps = {
+  projects: ManualEntryOption[];
+  tasks: ManualTaskOption[];
+  tags: ManualEntryOption[];
+  entry?: ManualEntryValue;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  trigger?: React.ReactNode;
+};
+
+function ManualEntryDialogContent({
   projects,
   tasks,
   tags,
   entry,
-}: {
-  projects: { id: string; name: string }[];
-  tasks: { id: string; name: string; projectId: string }[];
-  tags: { id: string; name: string }[];
-  entry?: {
-    id: string;
-    projectId: string;
-    taskId?: string | null;
-    startedAt: string;
-    endedAt: string;
-    note?: string | null;
-    tagIds: string[];
-  };
-}) {
-  const [open, setOpen] = useState(false);
-  const [selectedProjectId, setSelectedProjectId] = useState(entry?.projectId ?? projects[0]?.id ?? "");
+  open,
+  onOpenChange,
+  trigger,
+}: ManualEntryDialogProps) {
+  const [draftProjectId, setDraftProjectId] = useState<string | null>(null);
+  const selectedProjectId = draftProjectId ?? entry?.projectId ?? projects[0]?.id ?? "";
+
   const filteredTasks = useMemo(() => tasks.filter((task) => task.projectId === selectedProjectId), [selectedProjectId, tasks]);
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant={entry ? "secondary" : "default"}>
-          <CalendarClock className="size-4" />
-          {entry ? "Editar sesión" : "Registrar tiempo manualmente"}
-        </Button>
-      </DialogTrigger>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) {
+          setDraftProjectId(null);
+        }
+        onOpenChange(nextOpen);
+      }}
+    >
+      {trigger ? <DialogTrigger asChild>{trigger}</DialogTrigger> : null}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{entry ? "Editar entrada de tiempo" : "Crear entrada manual"}</DialogTitle>
@@ -53,7 +69,7 @@ export function ManualEntryForm({
             try {
               await saveManualEntryAction(formData);
               toast.success(entry ? "Sesión actualizada" : "Sesión creada");
-              setOpen(false);
+              onOpenChange(false);
             } catch (error) {
               toast.error(error instanceof Error ? error.message : "No se pudo guardar la sesión");
             }
@@ -67,9 +83,9 @@ export function ManualEntryForm({
               <select
                 id="manual-project"
                 name="projectId"
-                defaultValue={entry?.projectId ?? projects[0]?.id}
+                value={selectedProjectId}
                 className="h-11 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm shadow-sm"
-                onChange={(event) => setSelectedProjectId(event.target.value)}
+                onChange={(event) => setDraftProjectId(event.target.value)}
               >
                 {projects.map((project) => (
                   <option key={project.id} value={project.id}>
@@ -141,5 +157,40 @@ export function ManualEntryForm({
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+export function ManualEntryDialog(props: ManualEntryDialogProps) {
+  return <ManualEntryDialogContent {...props} />;
+}
+
+export function ManualEntryForm({
+  projects,
+  tasks,
+  tags,
+  entry,
+}: {
+  projects: ManualEntryOption[];
+  tasks: ManualTaskOption[];
+  tags: ManualEntryOption[];
+  entry?: ManualEntryValue;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <ManualEntryDialogContent
+      projects={projects}
+      tasks={tasks}
+      tags={tags}
+      entry={entry}
+      open={open}
+      onOpenChange={setOpen}
+      trigger={
+        <Button variant={entry ? "secondary" : "default"}>
+          <CalendarClock className="size-4" />
+          {entry ? "Editar sesión" : "Registrar tiempo manualmente"}
+        </Button>
+      }
+    />
   );
 }

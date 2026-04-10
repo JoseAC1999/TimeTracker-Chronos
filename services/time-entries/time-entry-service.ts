@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { differenceInSeconds, endOfMonth, endOfWeek, parseISO, startOfMonth, startOfWeek } from "date-fns";
 
 import { logAuditEvent } from "@/lib/audit/audit-service";
@@ -12,7 +13,7 @@ import {
 } from "@/lib/validations/time-entry";
 import { getTodayBounds } from "@/lib/utils/time";
 
-async function getActiveEntry(workspaceId: string, userId: string) {
+export const getActiveEntry = cache(async (workspaceId: string, userId: string) => {
   return prisma.timeEntry.findFirst({
     where: {
       workspaceId,
@@ -28,7 +29,7 @@ async function getActiveEntry(workspaceId: string, userId: string) {
       startedAt: "desc",
     },
   });
-}
+});
 
 function computeDuration(startedAt: Date, endedAt: Date, accumulatedPauseSec = 0) {
   return Math.max(differenceInSeconds(endedAt, startedAt) - accumulatedPauseSec, 0);
@@ -144,8 +145,10 @@ async function validateOverlap(
 
 export async function startTimer(workspaceId: string, userId: string, input: StartTimerInput) {
   const data = startTimerSchema.parse(input);
-  await ensureProjectAccess(workspaceId, data.projectId);
-  await ensureTaskAccess(workspaceId, data.taskId, data.projectId);
+  await Promise.all([
+    ensureProjectAccess(workspaceId, data.projectId),
+    ensureTaskAccess(workspaceId, data.taskId, data.projectId),
+  ]);
 
   const activeEntry = await getActiveEntry(workspaceId, userId);
 
@@ -280,13 +283,12 @@ export async function saveManualTimeEntry(workspaceId: string, userId: string, i
     throw new Error("La hora de fin debe ser posterior a la de inicio.");
   }
 
-  await ensureProjectAccess(workspaceId, data.projectId);
-  await ensureTaskAccess(workspaceId, data.taskId, data.projectId);
-  const tagIds = await ensureTagsAccess(workspaceId, data.tagIds);
-
-  if (data.id) {
-    await ensureOwnedEntry(workspaceId, userId, data.id);
-  }
+  const [, , tagIds] = await Promise.all([
+    ensureProjectAccess(workspaceId, data.projectId),
+    ensureTaskAccess(workspaceId, data.taskId, data.projectId),
+    ensureTagsAccess(workspaceId, data.tagIds),
+    data.id ? ensureOwnedEntry(workspaceId, userId, data.id) : Promise.resolve(null),
+  ]);
 
   await validateOverlap(workspaceId, userId, startedAt, endedAt, data.id);
 
@@ -432,8 +434,10 @@ export async function restoreTimeEntry(workspaceId: string, userId: string, entr
     throw new Error("No se encontró la sesión eliminada.");
   }
 
-  await ensureProjectAccess(workspaceId, entry.projectId);
-  await ensureTaskAccess(workspaceId, entry.taskId, entry.projectId);
+  await Promise.all([
+    ensureProjectAccess(workspaceId, entry.projectId),
+    ensureTaskAccess(workspaceId, entry.taskId, entry.projectId),
+  ]);
 
   const restored = await prisma.timeEntry.update({
     where: { id: entry.id },
@@ -464,11 +468,12 @@ export async function getTimerPageData(workspaceId: string, userId: string) {
     getActiveEntry(workspaceId, userId),
     prisma.project.findMany({
       where: { workspaceId, status: { not: "ARCHIVED" }, deletedAt: null },
+      select: { id: true, name: true },
       orderBy: { updatedAt: "desc" },
     }),
     prisma.task.findMany({
       where: { workspaceId, status: { not: "ARCHIVED" }, deletedAt: null },
-      include: { project: true },
+      select: { id: true, name: true, projectId: true },
       orderBy: { updatedAt: "desc" },
     }),
   ]);

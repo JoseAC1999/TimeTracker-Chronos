@@ -9,12 +9,7 @@ export async function getDashboardData(workspaceId: string, userId: string) {
   const todayEnd = endOfDay(today);
   const last7Days = subDays(todayStart, 6);
 
-  const [activeEntry, todayEntries, recentEntries, projects, weeklyEntries] = await Promise.all([
-    prisma.timeEntry.findFirst({
-      where: { workspaceId, userId, isRunning: true, deletedAt: null },
-      include: { project: true, task: true },
-      orderBy: { startedAt: "desc" },
-    }),
+  const [todayEntries, recentEntries, projects, weeklyEntries] = await Promise.all([
     prisma.timeEntry.findMany({
       where: {
         workspaceId,
@@ -49,7 +44,7 @@ export async function getDashboardData(workspaceId: string, userId: string) {
         deletedAt: null,
         startedAt: { gte: last7Days, lte: todayEnd },
       },
-      include: { project: true, task: true },
+      select: { durationSec: true, startedAt: true },
     }),
   ]);
 
@@ -84,18 +79,22 @@ export async function getDashboardData(workspaceId: string, userId: string) {
     }, {}),
   );
 
+  const weeklyTotals = weeklyEntries.reduce<Record<string, number>>((acc, entry) => {
+    const key = format(entry.startedAt, "yyyy-MM-dd");
+    acc[key] = (acc[key] ?? 0) + entry.durationSec;
+    return acc;
+  }, {});
+
   const weeklyTimeline = Array.from({ length: 7 }).map((_, index) => {
     const date = subDays(todayStart, 6 - index);
+    const key = format(date, "yyyy-MM-dd");
     const label = format(date, "EEE", { locale: es });
-    const total = weeklyEntries
-      .filter((entry) => format(entry.startedAt, "yyyy-MM-dd") === format(date, "yyyy-MM-dd"))
-      .reduce((sum, entry) => sum + entry.durationSec, 0);
+    const total = weeklyTotals[key] ?? 0;
 
     return { label, total };
   });
 
   return {
-    activeEntry,
     totalTodaySeconds,
     byProject,
     byTask,

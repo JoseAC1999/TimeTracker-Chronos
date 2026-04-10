@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 
@@ -8,7 +9,7 @@ export async function getServerAuthSession() {
   return getServerSession(authOptions);
 }
 
-export async function requireUser() {
+const loadRequiredUser = cache(async () => {
   const session = await getServerAuthSession();
 
   if (!session?.user?.id) {
@@ -28,4 +29,8 @@ export async function requireUser() {
   }
 
   return user;
+});
+
+export async function requireUser() {
+  return loadRequiredUser();
 }

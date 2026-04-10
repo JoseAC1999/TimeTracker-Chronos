@@ -128,6 +128,22 @@ Si prefieres migraciones versionadas:
 npm run prisma:migrate
 ```
 
+## Hardening recomendado para Supabase
+
+Si usas Supabase solo como PostgreSQL para Prisma y no expones estas tablas vía cliente Supabase, aplica también:
+
+```bash
+npm run db:harden:supabase
+```
+
+Este script:
+
+- activa RLS en todas las tablas de `public`
+- revoca acceso de `anon` y `authenticated`
+- evita que futuras tablas creadas por `postgres` vuelvan a heredar esos permisos
+
+La app sigue funcionando porque Prisma conecta con el rol `postgres`, que en este proyecto tiene `BYPASSRLS`.
+
 ## Arrancar en desarrollo
 
 ```bash

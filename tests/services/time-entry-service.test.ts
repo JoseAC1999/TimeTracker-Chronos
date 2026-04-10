@@ -11,7 +11,7 @@ const originals = {
   timeEntryFindFirst: prisma.timeEntry.findFirst,
   timeEntryCreate: prisma.timeEntry.create,
 };
-const auditLogCreateNoop = (async () => ({ id: "audit-1" })) as typeof prisma.auditLog.create;
+const auditLogCreateNoop = (async () => ({ id: "audit-1" })) as unknown as typeof prisma.auditLog.create;
 
 function restorePrisma() {
   prisma.auditLog.create = auditLogCreateNoop;

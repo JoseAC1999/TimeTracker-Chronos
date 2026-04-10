@@ -35,19 +35,34 @@ function write(level: LogLevel, payload: LogPayload) {
   const line = JSON.stringify(entry);
   const sinkConfig = getObservabilitySinkConfig();
   if (sinkConfig.url) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), sinkConfig.timeoutMs);
-    void fetch(sinkConfig.url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(sinkConfig.token ? { Authorization: `Bearer ${sinkConfig.token}` } : {}),
-      },
-      body: line,
-      signal: controller.signal,
-    }).finally(() => {
-      clearTimeout(timer);
-    });
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(sinkConfig.url);
+    } catch {
+      console.error("[logger] Invalid OBSERVABILITY_SINK_URL — skipping remote sink");
+      parsedUrl = null as unknown as URL;
+    }
+
+    if (parsedUrl && (parsedUrl.protocol === "https:" || parsedUrl.protocol === "http:")) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), sinkConfig.timeoutMs);
+      fetch(parsedUrl.toString(), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(sinkConfig.token ? { Authorization: `Bearer ${sinkConfig.token}` } : {}),
+        },
+        body: line,
+        signal: controller.signal,
+      })
+        .catch((err: unknown) => {
+          const message = err instanceof Error ? err.message : String(err);
+          console.error("[logger] Failed to send to observability sink:", message);
+        })
+        .finally(() => {
+          clearTimeout(timer);
+        });
+    }
   }
 
   if (level === "error") {

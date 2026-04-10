@@ -15,7 +15,7 @@ export function useLiveDuration(startedAt?: Date | string | null, accumulatedPau
     }, 1000);
 
     return () => window.clearInterval(interval);
-  }, [accumulatedPauseSec, isPaused, startedAt]);
+  }, [isPaused, startedAt]);
 
   return startedAt ? getLiveDuration(startedAt, accumulatedPauseSec) : 0;
 }

@@ -12,7 +12,8 @@
     "prisma:push": "prisma db push",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "db:harden:supabase": "prisma db execute --file prisma/security/harden-supabase.sql --schema prisma/schema.prisma"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

@@ -1,15 +1,49 @@
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { FolderPlus, ListTodo, Play, TimerReset, TrendingUp } from "lucide-react";
 
 import { RecentSessions } from "@/components/dashboard/recent-sessions";
 import { StatCard } from "@/components/dashboard/stat-card";
-import { TimeDistributionChart } from "@/components/dashboard/time-distribution-chart";
-import { WeeklyTrendChart } from "@/components/dashboard/weekly-trend-chart";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
+import { DAILY_TARGET_SECONDS, PROJECTS_PROGRESS_SCALE, SESSIONS_PROGRESS_SCALE } from "@/lib/constants/app";
 import { formatDurationLong } from "@/lib/utils/time";
 import { getDashboardData } from "@/services/dashboard/dashboard-service";
+
+const TimeDistributionChart = dynamic(
+  () => import("@/components/dashboard/time-distribution-chart").then((mod) => mod.TimeDistributionChart),
+  {
+    loading: () => (
+      <Card>
+        <CardHeader>
+          <CardTitle>Cargando gráfico</CardTitle>
+          <CardDescription>Preparando la visualización…</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="h-72 animate-pulse rounded-3xl bg-slate-100" />
+        </CardContent>
+      </Card>
+    ),
+  },
+);
+
+const WeeklyTrendChart = dynamic(
+  () => import("@/components/dashboard/weekly-trend-chart").then((mod) => mod.WeeklyTrendChart),
+  {
+    loading: () => (
+      <Card>
+        <CardHeader>
+          <CardTitle>Cargando tendencia</CardTitle>
+          <CardDescription>Preparando la serie semanal…</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="h-72 animate-pulse rounded-3xl bg-slate-100" />
+        </CardContent>
+      </Card>
+    ),
+  },
+);
 
 export default async function DashboardPage() {
   const user = await requireUser();
@@ -79,7 +113,7 @@ export default async function DashboardPage() {
           value={formatDurationLong(data.totalTodaySeconds)}
           helper="Tiempo registrado hoy en todas tus sesiones."
           accent="#99F6E4"
-          progress={Math.min(Math.round((data.totalTodaySeconds / 28800) * 100), 100)}
+          progress={Math.min(Math.round((data.totalTodaySeconds / DAILY_TARGET_SECONDS) * 100), 100)}
         />
         <StatCard
           label="Proyecto principal"
@@ -93,14 +127,14 @@ export default async function DashboardPage() {
           value={String(data.recentEntries.length)}
           helper="Últimos bloques registrados en tu espacio."
           accent="#FDE68A"
-          progress={Math.min(data.recentEntries.length * 16, 100)}
+          progress={Math.min(data.recentEntries.length * SESSIONS_PROGRESS_SCALE, 100)}
         />
         <StatCard
           label="Proyectos activos"
           value={String(data.projects.length)}
           helper="Proyectos activos o actualizados recientemente."
           accent="#FBCFE8"
-          progress={Math.min(data.projects.length * 14, 100)}
+          progress={Math.min(data.projects.length * PROJECTS_PROGRESS_SCALE, 100)}
         />
       </section>
 

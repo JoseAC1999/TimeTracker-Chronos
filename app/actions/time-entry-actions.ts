@@ -1,7 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-
 import { requireUser } from "@/lib/auth/session";
 import { captureError } from "@/lib/observability/capture";
 import { logger } from "@/lib/observability/logger";
@@ -15,15 +13,6 @@ import {
   startTimer,
   stopTimer,
 } from "@/services/time-entries/time-entry-service";
-
-const revalidateTimerPaths = () => {
-  revalidatePath("/dashboard");
-  revalidatePath("/timer");
-  revalidatePath("/sessions");
-  revalidatePath("/reports");
-  revalidatePath("/projects");
-  revalidatePath("/tasks");
-};
 
 export async function startTimerAction(formData: FormData) {
   const user = await requireUser();
@@ -44,8 +33,6 @@ export async function startTimerAction(formData: FormData) {
     captureError(error, "timer.start.failure", { userId: user.id, workspaceId: user.workspaceId });
     throw error;
   }
-
-  revalidateTimerPaths();
 }
 
 export async function pauseTimerAction(formData: FormData) {
@@ -57,7 +44,6 @@ export async function pauseTimerAction(formData: FormData) {
     captureError(error, "timer.pause.failure", { userId: user.id, workspaceId: user.workspaceId });
     throw error;
   }
-  revalidateTimerPaths();
 }
 
 export async function resumeTimerAction(formData: FormData) {
@@ -69,7 +55,6 @@ export async function resumeTimerAction(formData: FormData) {
     captureError(error, "timer.resume.failure", { userId: user.id, workspaceId: user.workspaceId });
     throw error;
   }
-  revalidateTimerPaths();
 }
 
 export async function stopTimerAction(formData: FormData) {
@@ -81,7 +66,6 @@ export async function stopTimerAction(formData: FormData) {
     captureError(error, "timer.stop.failure", { userId: user.id, workspaceId: user.workspaceId });
     throw error;
   }
-  revalidateTimerPaths();
 }
 
 export async function saveManualEntryAction(formData: FormData) {
@@ -101,8 +85,6 @@ export async function saveManualEntryAction(formData: FormData) {
     captureError(error, "timer.manual_entry.failure", { userId: user.id, workspaceId: user.workspaceId });
     throw error;
   }
-
-  revalidateTimerPaths();
 }
 
 export async function deleteTimeEntryAction(formData: FormData) {
@@ -114,7 +96,6 @@ export async function deleteTimeEntryAction(formData: FormData) {
     captureError(error, "timer.delete_entry.failure", { userId: user.id, workspaceId: user.workspaceId });
     throw error;
   }
-  revalidateTimerPaths();
 }
 
 export async function restoreTimeEntryAction(formData: FormData) {
@@ -126,5 +107,4 @@ export async function restoreTimeEntryAction(formData: FormData) {
     captureError(error, "timer.restore_entry.failure", { userId: user.id, workspaceId: user.workspaceId });
     throw error;
   }
-  revalidateTimerPaths();
 }

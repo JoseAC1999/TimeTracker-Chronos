@@ -7,7 +7,7 @@ import { pauseTimerAction, resumeTimerAction, stopTimerAction } from "@/app/acti
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useLiveDuration } from "@/hooks/use-live-duration";
-import { formatDurationLong } from "@/lib/utils/time";
+import { formatDurationClock, formatDurationLong } from "@/lib/utils/time";
 
 export function ActiveTimerBanner({
   entry,
@@ -31,7 +31,8 @@ export function ActiveTimerBanner({
       <CardContent className="flex flex-col gap-5 p-6 lg:flex-row lg:items-center lg:justify-between">
         <div className="space-y-2">
           <p className="text-xs uppercase tracking-[0.3em] text-teal-300">Cronómetro activo</p>
-          <h3 className="text-2xl font-semibold">{formatDurationLong(liveDuration)}</h3>
+          <h3 className="text-3xl font-semibold tabular-nums">{formatDurationClock(liveDuration)}</h3>
+          <p className="text-sm text-slate-400">{formatDurationLong(liveDuration)}</p>
           <p className="text-sm text-slate-300">
             {entry.project.name}
             {entry.task ? ` · ${entry.task.name}` : ""}

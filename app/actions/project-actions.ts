@@ -1,7 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-
 import { requireUser } from "@/lib/auth/session";
 import { captureError } from "@/lib/observability/capture";
 import { incrementMetric } from "@/lib/observability/metrics";
@@ -29,9 +27,6 @@ export async function upsertProjectAction(formData: FormData) {
     captureError(error, "project.upsert.failure", { userId: user.id, workspaceId: user.workspaceId });
     throw error;
   }
-
-  revalidatePath("/projects");
-  revalidatePath("/dashboard");
 }
 
 export async function deleteProjectAction(formData: FormData) {
@@ -44,9 +39,6 @@ export async function deleteProjectAction(formData: FormData) {
     captureError(error, "project.delete.failure", { userId: user.id, workspaceId: user.workspaceId, projectId });
     throw error;
   }
-
-  revalidatePath("/projects");
-  revalidatePath("/dashboard");
 }
 
 export async function restoreProjectAction(formData: FormData) {
@@ -59,9 +51,6 @@ export async function restoreProjectAction(formData: FormData) {
     captureError(error, "project.restore.failure", { userId: user.id, workspaceId: user.workspaceId, projectId });
     throw error;
   }
-
-  revalidatePath("/projects");
-  revalidatePath("/dashboard");
 }
 
 export async function upsertTaskAction(formData: FormData) {
@@ -82,10 +71,6 @@ export async function upsertTaskAction(formData: FormData) {
     captureError(error, "task.upsert.failure", { userId: user.id, workspaceId: user.workspaceId });
     throw error;
   }
-
-  revalidatePath("/tasks");
-  revalidatePath("/projects");
-  revalidatePath("/dashboard");
 }
 
 export async function deleteTaskAction(formData: FormData) {
@@ -98,10 +83,6 @@ export async function deleteTaskAction(formData: FormData) {
     captureError(error, "task.delete.failure", { userId: user.id, workspaceId: user.workspaceId, taskId });
     throw error;
   }
-
-  revalidatePath("/tasks");
-  revalidatePath("/projects");
-  revalidatePath("/dashboard");
 }
 
 export async function restoreTaskAction(formData: FormData) {
@@ -114,8 +95,4 @@ export async function restoreTaskAction(formData: FormData) {
     captureError(error, "task.restore.failure", { userId: user.id, workspaceId: user.workspaceId, taskId });
     throw error;
   }
-
-  revalidatePath("/tasks");
-  revalidatePath("/projects");
-  revalidatePath("/dashboard");
 }

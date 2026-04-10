@@ -1,11 +1,30 @@
+import dynamic from "next/dynamic";
 import { Activity, PieChart, SlidersHorizontal } from "lucide-react";
 
 import { StatCard } from "@/components/dashboard/stat-card";
-import { ReportCharts } from "@/components/reports/report-charts";
 import { ReportFilters } from "@/components/reports/report-filters";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
+import { CATEGORIES_PROGRESS_SCALE, REPORT_SESSIONS_PROGRESS_SCALE, WEEKLY_TARGET_SECONDS } from "@/lib/constants/app";
 import { formatDurationLong } from "@/lib/utils/time";
 import { getReportData } from "@/services/reports/report-service";
+
+const ReportCharts = dynamic(
+  () => import("@/components/reports/report-charts").then((mod) => mod.ReportCharts),
+  {
+    loading: () => (
+      <Card>
+        <CardHeader>
+          <CardTitle>Cargando gráficos</CardTitle>
+          <CardDescription>Preparando los datos visuales…</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="h-80 animate-pulse rounded-3xl bg-slate-100" />
+        </CardContent>
+      </Card>
+    ),
+  },
+);
 
 export default async function ReportsPage({
   searchParams,
@@ -59,7 +78,7 @@ export default async function ReportsPage({
           value={formatDurationLong(data.totalSeconds)}
           helper="Dentro del periodo seleccionado."
           accent="#99F6E4"
-          progress={Math.min(Math.round((data.totalSeconds / 144000) * 100), 100)}
+          progress={Math.min(Math.round((data.totalSeconds / WEEKLY_TARGET_SECONDS) * 100), 100)}
         />
         <StatCard
           label="Proyecto dominante"
@@ -73,14 +92,14 @@ export default async function ReportsPage({
           value={String(data.perCategory.length)}
           helper="Categorías distintas dentro del rango."
           accent="#FDE68A"
-          progress={Math.min(data.perCategory.length * 20, 100)}
+          progress={Math.min(data.perCategory.length * CATEGORIES_PROGRESS_SCALE, 100)}
         />
         <StatCard
           label="Sesiones"
           value={String(data.entries.length)}
           helper="Entradas capturadas tras aplicar filtros."
           accent="#FBCFE8"
-          progress={Math.min(data.entries.length * 8, 100)}
+          progress={Math.min(data.entries.length * REPORT_SESSIONS_PROGRESS_SCALE, 100)}
         />
       </section>
 
