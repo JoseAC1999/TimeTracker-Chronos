@@ -1,10 +1,18 @@
+import { unstable_cache } from "next/cache";
 import { eachDayOfInterval, endOfDay, endOfMonth, endOfWeek, format, startOfDay, startOfMonth, startOfWeek } from "date-fns";
 import { es } from "date-fns/locale";
 
 import { prisma } from "@/lib/db/prisma";
 import { reportFilterSchema, type ReportFilterInput } from "@/lib/validations/time-entry";
 
-export async function getReportData(workspaceId: string, userId: string, filters: Partial<ReportFilterInput>) {
+export const getReportData = (workspaceId: string, userId: string, filters: Partial<ReportFilterInput>) =>
+  unstable_cache(
+    async () => _getReportData(workspaceId, userId, filters),
+    [`reports-${workspaceId}-${userId}-${JSON.stringify(filters)}`],
+    { revalidate: 60 },
+  )();
+
+async function _getReportData(workspaceId: string, userId: string, filters: Partial<ReportFilterInput>) {
   const parsed = reportFilterSchema.parse({
     range: filters.range ?? "week",
     projectId: filters.projectId,

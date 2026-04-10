@@ -1,9 +1,17 @@
+import { unstable_cache } from "next/cache";
 import { endOfDay, format, startOfDay, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 
 import { prisma } from "@/lib/db/prisma";
 
-export async function getDashboardData(workspaceId: string, userId: string) {
+export const getDashboardData = (workspaceId: string, userId: string) =>
+  unstable_cache(
+    async () => _getDashboardData(workspaceId, userId),
+    [`dashboard-${workspaceId}-${userId}`],
+    { revalidate: 30 },
+  )();
+
+async function _getDashboardData(workspaceId: string, userId: string) {
   const today = new Date();
   const todayStart = startOfDay(today);
   const todayEnd = endOfDay(today);
